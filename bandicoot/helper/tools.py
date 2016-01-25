@@ -323,10 +323,10 @@ def entropy(data):
 def great_circle_distance(pt1, pt2):
     r = 6371.
 
-    delta_latitude = (pt1[0] - pt2[0]) / 180 * math.pi
-    delta_longitude = (pt1[1] - pt2[1]) / 180 * math.pi
-    latitude1 = pt1[0] / 180 * math.pi
-    latitude2 = pt2[0] / 180 * math.pi
+    delta_latitude = (pt1[0] - pt2[0]) / 180. * math.pi
+    delta_longitude = (pt1[1] - pt2[1]) / 180. * math.pi
+    latitude1 = pt1[0] / 180. * math.pi
+    latitude2 = pt2[0] / 180. * math.pi
 
     return r * 2. * math.asin(math.sqrt(math.pow(math.sin(delta_latitude / 2), 2) + math.cos(latitude1) * math.cos(latitude2) * math.pow(math.sin(delta_longitude / 2), 2)))
 

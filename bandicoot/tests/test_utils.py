@@ -70,16 +70,16 @@ class TestUtils(unittest.TestCase):
         self.assertAlmostEqual(bc.helper.tools.entropy(self.list_2), stats.entropy(self.list_2))
 
     def test_great_circle_distance(self):
-        pt1 = [-1, -1]
+        pt1 = [-1., -1.]
         pt2 = [1, 1]
-        pt3 = [0, 0]
+        pt3 = [0., 0.]
         pt4 = [100, -100]
-        self.assertEqual(bc.helper.tools.great_circle_distance(pt1, pt2), 0)
-        self.assertEqual(bc.helper.tools.great_circle_distance(pt1, pt3), 0)
-        self.assertEqual(bc.helper.tools.great_circle_distance(pt1, pt4), 20015.086796020572)
-        self.assertEqual(bc.helper.tools.great_circle_distance(pt2, pt3), 0)
-        self.assertEqual(bc.helper.tools.great_circle_distance(pt2, pt4), 20015.086796020572)
-        self.assertEqual(bc.helper.tools.great_circle_distance(pt3, pt4), 20015.086796020572)
+        self.assertEqual(bc.helper.tools.great_circle_distance(pt1, pt2), 314.49876254388795)
+        self.assertEqual(bc.helper.tools.great_circle_distance(pt1, pt3), 157.24938127194397)
+        self.assertEqual(bc.helper.tools.great_circle_distance(pt1, pt4), 9944.003359395136)
+        self.assertEqual(bc.helper.tools.great_circle_distance(pt2, pt3), 157.24938127194397)
+        self.assertEqual(bc.helper.tools.great_circle_distance(pt2, pt4), 9686.845683213172)
+        self.assertEqual(bc.helper.tools.great_circle_distance(pt3, pt4), 9815.405117224152)
 
     def test_summary_stats(self):
         self.assertEqual(bc.helper.tools.summary_stats([1, 5, 2]),
