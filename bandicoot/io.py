@@ -336,17 +336,8 @@ def read_postgres(user_id, connection_string=None, network=False, describe=True,
     user_id : str
         ID of the user (filename)
 
-    records_path : str
-        Path of the directory all the user files.
-
-    antennas_path : str, optional
-        Path of the CSV file containing (place_id, latitude, longitude) values.
-        This allows antennas to be mapped to their locations.
-
-    attributes_path : str, optional
-        Path of the directory containing attributes files (``key, value`` CSV file).
-        Attributes can for instance be variables such as like, age, or gender.
-        Attributes can be helpful to compute specific metrics.
+    connection_string : str
+        PostgreSQL connection string. Should be alike 'postgres://USER_NAME:USER_PASSWORD@ADDRESS:PORT/DATABASE'
 
     network : bool, optional
         If network is True, bandicoot loads the network of the user's correspondants from the same path. Defaults to False.
@@ -384,25 +375,51 @@ def read_postgres(user_id, connection_string=None, network=False, describe=True,
     """
     if connection_string is None:
         raise ValueError("No connection string provided.")
-    
-    connection = pg.connect(connection_string)
 
-    cur = connection.cursor()
+    class Postgres:
+        '''
+        Defines a PostgreSQL class; manages connections
+        with a PostgreSQL instance.
+
+        '''
+        def __init__(self, connection_string):
+            self.connection_string = connection_string
+            self.connection = None
+            self.cursor = None
+
+        def open(self):
+            '''
+            Opens connection to database.
+
+            '''
+            self.connection = pg.connect(self.connection_string)
+            self.cursor = self.connection.cursor()
+
+        def close(self):
+            '''
+            Closes connection to database.
+
+            '''
+            self.connection.close()
+            self.cursor.close()
+
+    database = Postgres(connection_string)
+    database.open()
 
     antennas = None
-    if connection.closed is not 1:
-        cur.execute('SELECT * FROM towers')
-        columns = [column[0] for column in cur.description]
-        records = [dict(zip(columns, row)) for row in cur.fetchall()]
-        antennas = dict((d['id'], (float(d['latitude']),
-                                             float(d['longitude'])))
-                            for d in records)
+    if database.connection.closed is not 1:
+        database.cursor.execute('SELECT * FROM towers')
+        columns = [ column[0] for column in database.cursor.description ]
+        records = [ dict(zip(columns, row)) for row in database.cursor.fetchall() ]
 
-    if connection.closed is not 1:
-        cur.execute("SELECT * FROM interactions WHERE sim_from='%s'" % user_id)
-        columns = [column[0] for column in cur.description]
-        reader = [dict(zip(columns, row)) for row in cur.fetchall()]
-        
+        antennas = dict((d['id'], (float(d['latitude']), float(d['longitude'])))
+            for d in records)
+
+    if database.connection.closed is not 1:
+        database.cursor.execute("SELECT * FROM interactions WHERE sim_from='%s'" % user_id)
+        columns = [ column[0] for column in database.cursor.description ]
+        reader = [ dict(zip(columns, row)) for row in database.cursor.fetchall() ]
+
         records = map(_parse_record, reader)
 
     user, bad_records = load(user_id, records, antennas, attributes=None, antennas_path=None,
@@ -418,6 +435,8 @@ def read_postgres(user_id, connection_string=None, network=False, describe=True,
 
     if errors:
         return user, bad_records
+
+    database.close()
     return user
 
 def read_csv(user_id, records_path, antennas_path=None, attributes_path=None, network=False, describe=True, warnings=True, errors=False):
@@ -603,7 +622,7 @@ def read_orange(user_id, records_path, antennas_path=None, attributes_path=None,
     try:
         if attributes_path is not None:
             attributes_file = os.path.join(attributes_path, user_id + ".csv")
-            with open(attributes_file, 'rb') as f: 
+            with open(attributes_file, 'rb') as f:
                 reader = csv.DictReader(f, delimiter=";", fieldnames=["key", "value"])
                 attributes = {a["key"]: a["value"] for a in reader}
     except IOError:
