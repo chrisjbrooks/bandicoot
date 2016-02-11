@@ -1,6 +1,6 @@
 -- Inserts sample towers into database.
 INSERT INTO antennas (id, longitude, latitude)
-  values 
+  values
     (1,42.3555368,-71.099507),
     (2,42.358954,-71.094565),
     (3,42.360400,-71.087374),
@@ -12,9 +12,11 @@ INSERT INTO antennas (id, longitude, latitude)
     (1000,45.1212, 12.1345),
     (1001,9.1121, 123.1345),
     (1002,4.1211, 5.2222);
-    
+
+-- Interts sample users to the database.
 INSERT INTO sims (id) values ('u_test2');
 
+-- Inserts sample records to the database.
 INSERT INTO interactions (sim_from,interaction_type,direction,sim_to,datetime,duration,antenna_id)
   values ('u_test2','call','in',770000008,'2013-12-16 05:31:30',0,15002),
   ('u_test2','call','in',770000001,'2013-12-16 05:39:30',0,15002),
