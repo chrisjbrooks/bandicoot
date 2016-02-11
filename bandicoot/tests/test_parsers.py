@@ -24,7 +24,7 @@ class TestParsers(unittest.TestCase):
             os.chdir(abspath)
             TestParsers._dir_changed = True
 
-        self.connection_string = 'postgres://flowminder:flowflow@192.168.99.100:9000/flowminder'
+        self.connection_string = os.getenv('POSTGRES_CONNECTION')
 
     def test_read_orange(self):
         user = bc.io.read_orange("u_test", "samples", describe=False)
