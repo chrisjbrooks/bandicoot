@@ -11,10 +11,23 @@ INSERT INTO antennas (id, longitude, latitude)
     (13088,37.7756,-122.4193),
     (1000,45.1212, 12.1345),
     (1001,9.1121, 123.1345),
-    (1002,4.1211, 5.2222);
+    (1002,4.1211, 5.2222)
+    ON CONFLICT DO NOTHING;
 
 -- Interts sample users to the database.
-INSERT INTO sims (id) values ('u_test2');
+INSERT INTO sims (id)
+  values
+    ('u_test2'),
+    ('770000004'),
+    ('770000009'),
+    ('770000002'),
+    ('770000008'),
+    ('770000001'),
+    ('770000003'),
+    ('770000007'),
+    ('770000005'),
+    ('770000006')
+    ON CONFLICT DO NOTHING;
 
 -- Inserts sample records to the database.
 INSERT INTO interactions (sim_from,interaction_type,direction,sim_to,datetime,duration,antenna_id)
@@ -517,4 +530,5 @@ INSERT INTO interactions (sim_from,interaction_type,direction,sim_to,datetime,du
   ('u_test2','text','in',770000005,'2013-12-18 11:26:30',0,15002),
   ('u_test2','text','in',770000007,'2013-12-18 11:32:30',0,15002),
   ('u_test2','text','out',770000008,'2013-12-18 11:34:30',0,15002),
-  ('u_test2','call','out',770000003,'2013-12-18 11:42:30',0,15002);
+  ('u_test2','call','out',770000003,'2013-12-18 11:42:30',0,15002)
+  ON CONFLICT DO NOTHING;
