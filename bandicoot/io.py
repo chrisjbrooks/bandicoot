@@ -16,6 +16,9 @@ from collections import Counter
 import csv
 import os
 
+import psycopg2 as pg
+from decimal import *
+
 
 def to_csv(objects, filename, digits=5):
     """
@@ -108,6 +111,8 @@ def _tryto(function, argument):
 
 def _parse_record(data):
     def _map_duration(s):
+        if isinstance(s, Decimal):
+            return int(s)
         return int(s) if s != '' else None
 
     def _map_position(data):
@@ -121,13 +126,15 @@ def _parse_record(data):
             antenna.position = float(data['latitude']), float(data['longitude'])
         return antenna
 
-    return Record(interaction=data['interaction'],
-                  direction=data['direction'],
-                  correspondent_id=data['correspondent_id'],
-                  datetime=_tryto(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S"), data['datetime']),
-                  call_duration=_tryto(_map_duration, data['call_duration']),
-                  position=_tryto(_map_position, data))
+    if isinstance(data['datetime'], datetime):
+        data['datetime'] = data['datetime'].strftime("%Y-%m-%d %H:%M:%S")
 
+    return Record(interaction=data.get('interaction') if data.get('interaction') is not None else data.get('interaction_type'),
+                  direction=data['direction'],
+                  correspondent_id=data.get('correspondent_id') if data.get('correspondent_id') is not None else data.get('sim_to'),
+                  datetime=_tryto(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S"), data['datetime']),
+                  call_duration=_tryto(_map_duration, data.get('call_duration') if data.get('call_duration') is not None else data.get('duration')),
+                  position=_tryto(_map_position, data))
 
 def filter_record(records):
     """
@@ -319,6 +326,99 @@ def _read_network(user, records_path, attributes_path, read_function, antennas_p
     # Return the network dictionary sorted by key
     return OrderedDict(sorted(connections.items(), key=lambda t: t[0]))
 
+def read_postgres(user_id, connection_string=None, network=False, describe=True, warnings=True, errors=False):
+    """
+    Load user records from a CSV file.
+
+    Parameters
+    ----------
+
+    user_id : str
+        ID of the user (filename)
+
+    records_path : str
+        Path of the directory all the user files.
+
+    antennas_path : str, optional
+        Path of the CSV file containing (place_id, latitude, longitude) values.
+        This allows antennas to be mapped to their locations.
+
+    attributes_path : str, optional
+        Path of the directory containing attributes files (``key, value`` CSV file).
+        Attributes can for instance be variables such as like, age, or gender.
+        Attributes can be helpful to compute specific metrics.
+
+    network : bool, optional
+        If network is True, bandicoot loads the network of the user's correspondants from the same path. Defaults to False.
+
+    describe : boolean
+        If describe is True, it will print a description of the loaded user to the standard output.
+
+    errors : boolean
+        If errors is True, returns a tuple (user, errors), where user is the user object and errors are the records which could not
+        be loaded.
+
+
+    Examples
+    --------
+
+    >>> user = bandicoot.read_csv('sample_records', '.')
+    >>> print len(user.records)
+    10
+
+    >>> user = bandicoot.read_csv('sample_records', 'samples', sample_places.csv')
+    >>> print len(user.antennas)
+    5
+
+    >>> user = bandicoot.read_csv('sample_records', '.', None, 'sample_attributes.csv')
+    >>> print user.attributes['age']
+    25
+
+    Notes
+    -----
+    - The csv files can be single, or double quoted if needed.
+    - Empty cells are filled with ``None``. For example, if the column
+      ``call_duration`` is empty for one record, its value will be ``None``.
+      Other values such as ``"N/A"``, ``"None"``, ``"null"`` will be
+      considered as a text.
+    """
+    if connection_string is None:
+        raise ValueError("No connection string provided.")
+    
+    connection = pg.connect(connection_string)
+
+    cur = connection.cursor()
+
+    antennas = None
+    if connection.closed is not 1:
+        cur.execute('SELECT * FROM towers')
+        columns = [column[0] for column in cur.description]
+        records = [dict(zip(columns, row)) for row in cur.fetchall()]
+        antennas = dict((d['id'], (float(d['latitude']),
+                                             float(d['longitude'])))
+                            for d in records)
+
+    if connection.closed is not 1:
+        cur.execute("SELECT * FROM interactions WHERE sim_from='%s'" % user_id)
+        columns = [column[0] for column in cur.description]
+        reader = [dict(zip(columns, row)) for row in cur.fetchall()]
+        
+        records = map(_parse_record, reader)
+
+    user, bad_records = load(user_id, records, antennas, attributes=None, antennas_path=None,
+                             attributes_path=None, describe=False, warnings=warnings)
+
+    # Loads the network
+    if network is True:
+        user.network = _read_network(user, records_path, attributes_path, read_csv, antennas_path)
+        user.recompute_missing_neighbors()
+
+    if describe:
+        user.describe()
+
+    if errors:
+        return user, bad_records
+    return user
 
 def read_csv(user_id, records_path, antennas_path=None, attributes_path=None, network=False, describe=True, warnings=True, errors=False):
     """
